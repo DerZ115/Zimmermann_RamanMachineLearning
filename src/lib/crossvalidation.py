@@ -17,13 +17,15 @@ else:
 
 
 
-def randomized_cv(clf, X, y, param_grid,
+def randomized_cv(clf, X, y, param_grid=None,
                   gs_scoring="accuracy",
                   ct_scoring="accuracy",
                   n_folds=10,
                   n_trials=20,
                   n_jobs=-1):
 
+    if param_grid is None:
+        param_grid = {}
     combs = list(ParameterGrid(param_grid))
 
     ct_train_scores = {score: np.zeros(

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
+from pathlib import Path
 
 from .opus_converter import convert_opus
 
@@ -12,7 +13,12 @@ def mode(x):
 
 
 def load_data(path):
-    if path.endswith(".csv") or path.endswith(".txt") or path.endswith(".tsv"):
+    if isinstance(path, Path):
+        suffix = path.suffix
+    elif isinstance(path, str):
+        suffix = path.split(".")[-1]
+
+    if suffix == ".csv" or suffix == ".txt" or suffix == ".tsv":
         data = pd.read_csv(path)
 
     else:
