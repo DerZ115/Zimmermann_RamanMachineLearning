@@ -45,7 +45,7 @@ def create_dataset(dirs_in, labels):
 
         for file in files:
             logger.debug(f"Loading file {file}")
-            lab.append(labels[i])
+            
             if file.suffix.lower() == ".txt" or file.suffix.lower() == ".csv":
                 filedata = np.genfromtxt(file, delimiter=",")
             elif file.suffix == ".tsv":
@@ -56,7 +56,9 @@ def create_dataset(dirs_in, labels):
                 logger.error(
                     f"Unsupported filetype for file {file}. Use csv or tsv plain text files or binary OPUS files.")
                 logger.warning(f"Skipping file {file} ...")
-
+                continue
+            
+            lab.append(labels[i])
             wns.append(filedata[:, 0])
             data.append(filedata[:, 1])
 
@@ -75,7 +77,7 @@ def create_dataset(dirs_in, labels):
 
 
 if __name__ == "__main__":
-    logger.info("Started dataset creation")
+    logger.info("Starting dataset creation")
     parser = argparse.ArgumentParser(
         description="Create a single csv file from individual Raman spectra."
     )

@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument("-f", "--file", metavar="PATH", type=str, nargs=1, action="store",
                         help=".csv file containing the spectral data.", required=True)
     parser.add_argument("-o", "--out", metavar="PATH", type=str, nargs=1, action="store",
-                        help="Path for the output file.", required=True)
+                        help="Path for the output directory.", required=True)
     parser.add_argument("-l", "--limits", metavar=("LOW", "HIGH"), type=float, nargs=2, action="store",
                         help="Limits for reducing the spectral range.", required=False, default=(None, None))
 
@@ -44,11 +44,20 @@ if __name__ == "__main__":
     y = np.asarray(data.label)
     y, y_key = pd.factorize(y)
 
+    scoring = [
+    "accuracy", 
+    "f1",
+    "roc_auc"
+    ]
+
     ### LDA only
 
     clf = LinearDiscriminantAnalysis()
 
-    clf, ct_results, cv_result = randomized_cv(clf, X, y)
+    clf, ct_results, cv_result = randomized_cv(clf, X, y, ct_scoring=scoring)
+
+    
+
 
 
 

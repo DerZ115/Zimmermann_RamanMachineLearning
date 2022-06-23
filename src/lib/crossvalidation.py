@@ -22,7 +22,7 @@ def randomized_cv(clf, X, y, param_grid=None,
                   ct_scoring="accuracy",
                   n_folds=10,
                   n_trials=20,
-                  n_jobs=-1):
+                  n_jobs=1):
 
     if param_grid is None:
         param_grid = {}
@@ -92,12 +92,7 @@ def randomized_cv(clf, X, y, param_grid=None,
 
             y_pred[i, test] = gs.predict(X_test)
 
-            try:
-                tmp = gs.predict_proba(X_test)[:, 1]
-            except AttributeError:
-                tmp = gs.decision_function(X_test)
-
-            conf_scores[i, test] = tmp
+            conf_scores[i, test] = gs.decision_function(X_test)
 
         mcn_table = mcnemar_table(y.ravel(), dummy_results.ravel(), y_pred[i,:].ravel())
         _, p_vals[i] = mcnemar(mcn_table)

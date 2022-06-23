@@ -1,7 +1,10 @@
 import re
 import struct
+import logging
 
 import numpy as np
+
+opus_conv_logger = logging.getLogger("__main__." + __name__)
 
 
 def convert_opus(file, meta=False):
@@ -14,6 +17,7 @@ def convert_opus(file, meta=False):
     Returns:
         array: Spectral data from the file, with wavenumbers in the first and intensities in the second column.
     """
+    opus_conv_logger.debug(f"Loading OPUS binary file {file}")
     with open(file, "rb") as f:
         data = f.read()
 
@@ -29,6 +33,7 @@ def convert_opus(file, meta=False):
         END\x00.{8}(.*?)\x00{4}NPT                      # Raman Data
     """, re.VERBOSE | re.DOTALL)
 
+    opus_conv_logger.debug("Extracting data...")
     mo = ramanDataRegex.search(data)
     npt, fxv, lxv, dat, tim, ints = mo.groups()
 
