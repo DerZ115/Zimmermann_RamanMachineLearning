@@ -28,7 +28,7 @@ logfile = logdir / f"{dt}.log"
 handler_c = logging.StreamHandler()
 handler_f = logging.FileHandler(logfile)
 
-handler_c.setLevel(logging.WARN)
+handler_c.setLevel(logging.INFO)
 handler_f.setLevel(logging.DEBUG)
 
 format_c = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
@@ -109,6 +109,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     for arg, val in vars(args).items():
         logger.debug(f"Received argument {arg} with value {val}")
+
+    datadir = Path(args.out).parent
+
+    if not os.path.exists(datadir):
+        logger.debug("Creating data directory")
+        os.makedirs(datadir)
 
     dataset = create_dataset(args.dir, args.label)
 

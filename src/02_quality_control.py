@@ -28,7 +28,7 @@ logfile = logdir / f"{dt}.log"
 handler_c = logging.StreamHandler()
 handler_f = logging.FileHandler(logfile)
 
-handler_c.setLevel(logging.WARN)
+handler_c.setLevel(logging.INFO)
 handler_f.setLevel(logging.DEBUG)
 
 format_c = logging.Formatter('%(name)s - %(levelname)s - %(message)s')

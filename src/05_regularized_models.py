@@ -102,7 +102,7 @@ if __name__ == "__main__":
     data = load_data(path_in)
 
     logger.info("Parsing data")
-    X = data.loc[:, data.columns != "label"]
+    X = data.drop(columns=["label", "file"], errors="ignore")
     wns = np.asarray(X.columns.astype(float))
     X = np.asarray(X)
     y = np.asarray(data.label)

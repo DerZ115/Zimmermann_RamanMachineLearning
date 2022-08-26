@@ -30,7 +30,7 @@ logfile = logdir / f"{dt}.log"
 handler_c = logging.StreamHandler()
 handler_f = logging.FileHandler(logfile)
 
-handler_c.setLevel(logging.WARN)
+handler_c.setLevel(logging.INFO)
 handler_f.setLevel(logging.DEBUG)
 
 format_c = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
@@ -44,7 +44,7 @@ logger.addHandler(handler_f)
 
 
 def preprocess(data, limits=(None, None), sg_window=15):
-    X = data.drop(columns=["label", "file"])
+    X = data.drop(columns=["label", "file"], errors="ignore")
     wns = np.asarray(X.columns.astype(float))
     X = np.asarray(X)
     y = np.asarray(data.label)
