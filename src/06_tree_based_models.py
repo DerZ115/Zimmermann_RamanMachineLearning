@@ -64,13 +64,13 @@ def parse_args():
                         help="Number of folds for crossvalidation.", default=5)
     parser.add_argument("-j", "--jobs", metavar="INT", type=int, action="store",
                         help="Number of parallel jobs. Set as -1 to use all available processors", default=1)
-    parser.add_argument("--tree_depth", metavar=("min", "max+1", "step"), type=int, nargs=3, action="store", 
+    parser.add_argument("--tree-depth", metavar=("min", "max+1", "step"), type=int, nargs=3, action="store", 
                         help="Used to set the range of maximum depths for crossvalidation of decision trees.", 
                         default=[1, 10, 1])
     parser.add_argument("--tree-alpha", metavar=("min", "max", "n steps"), type=int_float, nargs=3, action="store", 
                         help="Used to set the range of alpha values for pruning of decision trees using numpy.logspace.", 
                         default=[-2, 2, 5])
-    parser.add_argument("--rf_depth", metavar=("min", "max+1", "step"), type=int, nargs=3, action="store", 
+    parser.add_argument("--rf-depth", metavar=("min", "max+1", "step"), type=int, nargs=3, action="store", 
                         help="Used to set the range of maximum depths for crossvalidation of random forests.", 
                         default=[1, 10, 1])
     parser.add_argument("--gbdt-learning-rate", metavar=("min", "max", "n steps"), type=int_float, nargs=3, action="store", 
