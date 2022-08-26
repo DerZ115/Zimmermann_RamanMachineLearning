@@ -334,7 +334,7 @@ class CrossValidator(BaseEstimator, MetaEstimatorMixin):
             )
 
         if self.explainer:
-            os.mkdir(path / "shap")
+            os.makedirs(path / "shap", exist_ok=True)
             
             pd.DataFrame(self.shap_results_.values).to_csv(
                 path / "shap" / "values.csv",
