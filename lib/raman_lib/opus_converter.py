@@ -4,7 +4,7 @@ import logging
 
 import numpy as np
 
-opus_conv_logger = logging.getLogger("__main__." + __name__)
+opus_conv_logger = logging.getLogger(__name__)
 
 
 def convert_opus(file, meta=False):
@@ -22,7 +22,7 @@ def convert_opus(file, meta=False):
         data = f.read()
 
     ramanDataRegex = re.compile(br"""
-        END\x00{5}NPT\x00{3}\x02\x00(.{4})              # Number of points
+        \x00{5}NPT\x00{3}\x02\x00(.{4})                 # Number of points
         FXV\x00\x01\x00\x04\x00(.{8})                   # First wavenumber
         LXV\x00\x01\x00\x04\x00(.{8})                   # Last wavenumber
         CSF\x00.{12}MXY\x00.{12}                        # Not used
@@ -30,7 +30,7 @@ def convert_opus(file, meta=False):
         DAT\x00.{4}(.{10})\x00\x00                      # Date
         TIM\x00.{4}(.{16}).{4}                          # Time
         DXU\x00.{8}                                     # Not used
-        END\x00.{8}(.*?)\x00{4}NPT                      # Raman Data
+        END\x00{9}(.*?)\x00{4}NPT                      # Raman Data
     """, re.VERBOSE | re.DOTALL)
 
     opus_conv_logger.debug("Extracting data...")

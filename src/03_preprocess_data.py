@@ -1,23 +1,36 @@
+import sys
+sys.path.append("./lib/")
+
 import argparse
+import os
 from pathlib import Path
+from datetime import datetime
 import logging
 
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import Normalizer
 
-from lib.misc import load_data
-from lib.preprocessing import BaselineCorrector, RangeLimiter, SavGolFilter
+from raman_lib.misc import load_data
+from raman_lib.preprocessing import BaselineCorrector, RangeLimiter, SavGolFilter
 
 # Prepare logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-handler_c = logging.StreamHandler()
-handler_f = logging.FileHandler("./log/03_preprocess_data.log")
+logdir  = Path("./log/03_preprocess_data/")
 
-handler_c.setLevel(logging.DEBUG)
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
+
+dt = datetime.now().strftime("%Y%m%d-%H%M%S")
+logfile = logdir / f"{dt}.log"
+
+handler_c = logging.StreamHandler()
+handler_f = logging.FileHandler(logfile)
+
+handler_c.setLevel(logging.WARN)
 handler_f.setLevel(logging.DEBUG)
 
 format_c = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
@@ -30,22 +43,23 @@ logger.addHandler(handler_c)
 logger.addHandler(handler_f)
 
 
-def preprocess(data):
-    X = data.loc[:, data.columns != "label"]
+def preprocess(data, limits=(None, None), sg_window=15):
+    X = data.drop(columns=["label", "file"])
     wns = np.asarray(X.columns.astype(float))
     X = np.asarray(X)
     y = np.asarray(data.label)
+    files = np.asarray(data.file)
 
     # Subtract baseline
     X = BaselineCorrector().fit_transform(X)
 
     # Reduce spectral range
-    rl = RangeLimiter(lim=(450, 1670), reference=wns)
+    rl = RangeLimiter(lim=limits, reference=wns)
     X = rl.fit_transform(X)
     wns_reduced = wns[rl.lim_[0]:rl.lim_[1]]
 
     # Smooth spetra
-    X = SavGolFilter().fit_transform(X)
+    X = SavGolFilter(window=sg_window).fit_transform(X)
 
     # Normalize intensity
     X = Normalizer().fit_transform(X)
@@ -53,6 +67,7 @@ def preprocess(data):
     # Combine data back to Dataframe
     data_prep = pd.DataFrame(X, columns=wns_reduced)
     data_prep.insert(0, "label", y)
+    data_prep.insert(1, "file", files)
 
     return data_prep
 
@@ -62,17 +77,20 @@ def parse_args():
         description="Create a single csv file from individual Raman spectra."
     )
 
-    parser.add_argument("-f", "--file", metavar="PATH", type=str, nargs=1, action="store",
+    parser.add_argument("-f", "--file", metavar="PATH", type=str, action="store",
                         help=".csv file containing the spectral data.", required=True)
-    parser.add_argument("-o", "--out", metavar="PATH", type=str, nargs=1, action="store",
+    parser.add_argument("-o", "--out", metavar="PATH", type=str, action="store",
                         help="Path for the output file.", required=True)
     parser.add_argument("-l", "--limits", metavar=("LOW", "HIGH"), type=float, nargs=2, action="store",
                         help="Limits for reducing the spectral range.", required=False, default=(None, None))
+    parser.add_argument("-w", "--window", metavar="INT", type=int, action="store",
+                        help="Window size for Savitzky-Golay smoothing", required=False, default=15)
 
     # TODO: Add arguments for other preprocessing steps
 
     logger.info("Parsing arguments")
     args = parser.parse_args()
+
     for arg, val in vars(args).items():
         logger.debug(f"Received argument {arg} with value {val}")
 
@@ -83,19 +101,22 @@ if __name__ == "__main__":
     logger.info("Starting data preprocessing")
     args = parse_args()
 
-    path_in = Path(args.file[0])
-    path_out = Path(args.out[0])
+    path_in = Path(args.file)
+    path_out = Path(args.out)
 
-    filename = path_in.stem
+    filename = path_in.stem.removesuffix("_qc")
 
-    if path_out.is_dir:
-        path_out = path_out / (filename + "_preprocessed.csv")
+    if not os.path.exists(path_out):
+        logger.info("Creating output directory")
+        os.makedirs(path_out)
+
+    path_out = path_out / (filename + "_preprocessed.csv")
 
     logger.info(f"Loading data from {path_in}")
     data = load_data(path_in)
     logger.info("Finished loading data")
 
-    data_prep = preprocess(data)
+    data_prep = preprocess(data, limits=args.limits, sg_window=args.window)
 
     logger.info("Preprocessing complete")
     logger.info(f"Saving preprocessed data to {path_out}")

@@ -1,36 +1,53 @@
 import numpy as np
 import time
 import pandas as pd
+import logging
 from scipy.integrate import simpson
-from scipy.signal import argrelmin, savgol_filter
+from scipy.signal import argrelmax, savgol_filter
+from sklearn.preprocessing import normalize
 
-from .preprocessing import BaselineCorrector
+from .preprocessing import BaselineCorrector, RangeLimiter
+
+scoring_logger = logging.getLogger(__name__)
+
+score_names = {0: "No Score",
+               1: "Median Height",
+               2: "Mean Height",
+               3: "Mean Area",
+               4: "Total Area"}
+
+peak_score_names = {0: "No Influence",
+                    1: "First Order Influence",
+                    2: "Second Order (Quadratic) Influence"}
 
 
-def limit_range(data, limit_low, limit_high):
+def limit_range(data, limits):
     """Limit the frequency range of spectral data.
 
     Args:
         data (pd.DataFrame): Raw spectral data, with each row representing one spectrum. IMPORTANT: Make sure that the column names (i.e. the frequencies/wavenumbers) are of type float or int.
         limit_low (int or float or None): Lower limit of the spectral range.
-        limit_high (int or float or None): Upper limit of the spectral range.
+        limit_high (int or float or None): Upper limit of the spectral rascorenge.
 
     Returns:
         pd.DataFrame: Data with reduced range.
     """
-    if limit_low == None:
-        limit_low = data.columns[0]
 
-    if limit_high == None:
-        limit_high == data.columns[-1]
+    scoring_logger.debug(
+        f"Reducing spectral range")
+    
+    wns = np.asarray(data.columns.astype(float))
 
-    return data.loc[:, limit_low:limit_high]
+    rl = RangeLimiter(lim=limits, reference=wns).fit(data)
+
+    return rl.transform(data)
 
 
 def baseline_correction(data, method="asls"):
     """Estimate and subtract the baseline from a set of spectra.
 
-    Args:
+    Args:    
+    data_sg = pd.DataFrame(normalize(data, norm="max"), columns=data.columns)
         data (pandas.DataFrame): Raw spectral data. Rows represent the individual spectra.
         method (str, optional): Baseline correction method to use. Defaults to "asls".
 
@@ -39,13 +56,14 @@ def baseline_correction(data, method="asls"):
     """
     wns = data.columns
 
+    scoring_logger.debug(f"Estimating baseline using method {method}")
     bl = BaselineCorrector(method=method)
     data = bl.fit_transform(data)
     data = pd.DataFrame(data, columns=wns)
     return data
 
 
-def peakRecognition(data, sg_window, threshold):
+def peakRecognition(data, data_bl, sg_window, bl_method="asls", threshold=0, min_height=0):
     """Determines the number of peaks in each spectrum based on a 2nd derivative Savitzky-Golay-Filter.
 
     Args:
@@ -55,32 +73,33 @@ def peakRecognition(data, sg_window, threshold):
     Returns:
         peaks (list): List of lists with the peaks found in each spectrum
     """
-
+    scoring_logger.debug("Starting peak detection")
     wns = data.columns.astype("float64")
+
+    data_sg = pd.DataFrame(normalize(data, norm="max"), columns=data.columns)
+    data_sg = baseline_correction(data_sg, method=bl_method)
+
+    scoring_logger.debug("Calculating derivative")
     data_sg = pd.DataFrame(
-        savgol_filter(data, window_length=2*sg_window+1, polyorder=3, deriv=2), columns=wns)
+        savgol_filter(data, window_length=sg_window, polyorder=2, deriv=1), columns=wns)
 
     peaks = []
 
+    scoring_logger.debug("Finding peaks")
     for i, row in data_sg.iterrows():
-        row_peaks = argrelmin(row.values)[0]
-        row_peaks = [peak for peak in row_peaks if row.iloc[peak]
-                     < -threshold]  # Remove peaks below threshold
+        row_peaks = np.where(np.diff(np.sign(row)))[0]
+        row_max = argrelmax(row.values)[0]
+        # Remove peaks below threshold
+        row_max = [j for j in row_max if row.iloc[j]
+                   > threshold and j < row_peaks[-1]]
+        row_max = [j for j in row_max if data_bl.iloc[i, j] >= min_height]
 
-        # Combine peaks w/o positive 2nd derivative between them
-        peak_condensing = []
-        peaks_condensed = []
-        for j in range(len(row)):
-            if j in row_peaks:
-                peak_condensing.append(j)
-            if row.iloc[j] > 0 and len(peak_condensing) > 0:
-                peaks_condensed.append(int(np.mean(peak_condensing)))
-                peak_condensing = []
-        if len(peak_condensing) > 0:
-            peaks_condensed.append(int(np.mean(peak_condensing)))
+        peaks_tmp = np.searchsorted(row_peaks, row_max)
+        peaks_tmp = np.unique(peaks_tmp)
+        row_peaks = row_peaks[peaks_tmp]
+        peaks.append(row_peaks)
 
-        peaks.append(peaks_condensed)
-
+    scoring_logger.debug("Peak detection complete")
     return peaks
 
 
@@ -102,6 +121,11 @@ def calc_scores(data, peaks, score_measure, n_peaks_influence):
 
     scores = []
     n_peaks_all = []
+    scores_peaks = []
+
+    scoring_logger.debug("Calculating quality scores")
+    scoring_logger.debug(f"Intensity measure: {score_names[score_measure]}")
+    scoring_logger.debug(f"Peak influence: {peak_score_names[n_peaks_influence]}")
 
     for i, row in enumerate(peaks):
         n_peaks = len(row)
@@ -124,18 +148,18 @@ def calc_scores(data, peaks, score_measure, n_peaks_influence):
         n_peaks_all.append(n_peaks)
 
         if n_peaks == 0:
-            scores_peaks = 0
+            scores_peaks.append(0)
         elif n_peaks_influence == 0:
-            scores_peaks = scores
+            scores_peaks.append(score)
         elif n_peaks_influence == 1:
-            scores_peaks = [n*score for n, score in zip(n_peaks_all, scores)]
+            scores_peaks.append(n_peaks*score)
         elif n_peaks_influence == 2:
-            scores_peaks = [score**(n/50)
-                            for n, score in zip(n_peaks_all, scores)]
+            scores_peaks.append(score*(n_peaks**2))
 
-    n_peaks_all = [n_peaks for _, n_peaks in sorted(
-        zip(scores_peaks, n_peaks_all))]
-    n_peaks_all.reverse()
+    scoring_logger.debug("Score calculation complete")
+#    n_peaks_all = [n_peaks for _, n_peaks in sorted(
+#        zip(scores_peaks, n_peaks_all))]
+#    n_peaks_all.reverse()
     return scores_peaks, scores, n_peaks_all
 
 
@@ -151,6 +175,7 @@ def sort_spectra(data, scores):
     Returns:
         pandas.DataFrame: Sorted data, Class labels are included as the first column.
     """
+    scoring_logger.debug("Sorting data by score")
     data_sorted = data.copy()
     data_sorted.insert(0, "score", scores)
     data_sorted = data_sorted.sort_values("score", ascending=False)
@@ -160,6 +185,7 @@ def sort_spectra(data, scores):
 
 
 def remove_low_quality(data, n=None, min_n=0, min_score=0):
+    scoring_logger.debug("Removing low quality spectra")
     if min_score == 0 and min_n != 0:
         raise ValueError("min_n only works in combination with min_score")
 
@@ -168,7 +194,7 @@ def remove_low_quality(data, n=None, min_n=0, min_score=0):
     if n is not None:
         for _, group in data.groupby("label"):
             data_out = pd.concat([data_out, group.iloc[:n, :]])
-        
+
     elif min_score != 0:
         for _, group in data.groupby("label"):
             group_out = group.loc[group.score >= min_score, :]
@@ -183,7 +209,6 @@ def remove_low_quality(data, n=None, min_n=0, min_score=0):
     return data_out
 
 
-
 def score_sort_spectra(data,
                        n=None,
                        min_n=0,
@@ -192,6 +217,7 @@ def score_sort_spectra(data,
                        bl_method="asls",
                        sg_window=17,
                        threshold=0.5,
+                       min_height=0,
                        score_measure=1,
                        n_peaks_influence=1,
                        detailed=False):
@@ -213,6 +239,7 @@ def score_sort_spectra(data,
 
     start_time = time.perf_counter()
 
+    scoring_logger.info("Checking data")
     if not isinstance(data, pd.DataFrame):
         raise TypeError("Data must be a pandas DataFrame.")
 
@@ -224,37 +251,40 @@ def score_sort_spectra(data,
     else:
         files = None
 
-    data = data.loc[:, ~data.columns.isin(["label", "file"])]
+    data = data.drop(columns=["label", "file"])
 
-    data = limit_range(data, limits[0], limits[1])
+    data = limit_range(data, limits)
 
     data_bl = baseline_correction(data, method=bl_method)
 
-    peaks = peakRecognition(data_bl, sg_window, threshold)
+    peaks = peakRecognition(data, data_bl, sg_window, bl_method, threshold, min_height)
 
     scores, intensity_scores, n_peaks = calc_scores(
         data_bl, peaks, score_measure, n_peaks_influence)
 
     data_sorted = sort_spectra(orig_data, scores)
 
-    data_out = remove_low_quality(data_sorted, n=n, min_n=min_n, min_score=min_score)
+    data_out = remove_low_quality(
+        data_sorted, n=n, min_n=min_n, min_score=min_score)
 
     data_out.drop(columns="score", inplace=True)
 
     end_time = time.perf_counter()
 
-    print(f"Analyzed {len(data)} spectra in {round(end_time-start_time, 2)} seconds.")
-    print()
-    print(f"Mean Score: {int(np.mean(scores))}")
-    print()
-    print(f"1st Quartile: {int(np.quantile(scores, 0.25))}")
-    print(f"Median Score: {int(np.median(scores))}")
-    print(f"3rd Quartile: {int(np.quantile(scores, 0.75))}")
-    print()
-    print(f"Min Score: {int(np.min(scores))}")
-    print(f"Max Score: {int(np.max(scores))}")
+    scoring_logger.info(f"Analyzed {len(data)} spectra in {round(end_time-start_time, 2)} seconds.")
+    scoring_logger.info(f"Mean Score: {int(np.mean(scores))}")
+
+    scoring_logger.info(f"1st Quartile: {int(np.quantile(scores, 0.25))}")
+    scoring_logger.info(f"Median Score: {int(np.median(scores))}")
+    scoring_logger.info(f"3rd Quartile: {int(np.quantile(scores, 0.75))}")
+
+    scoring_logger.info(f"Min Score: {int(np.min(scores))}")
+    scoring_logger.info(f"Max Score: {int(np.max(scores))}")
 
     if detailed:
-        return data_out, (intensity_scores, n_peaks)
+        return data_out, {"intensity_scores": intensity_scores,
+                          "peak_scores": n_peaks,
+                          "total_scores": scores,
+                          "peak_pos": peaks}
     else:
         return data_out

@@ -1,6 +1,9 @@
-data/
-log/
-results/
+data/*
+log/*
+results/*
+notebooks/.ipynb_checkpoints
 
 __pycache__/
 *.pyc
+
+.vscode

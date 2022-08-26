@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import os
+import logging
+import tqdm
 from pathlib import Path
 
 from .opus_converter import convert_opus
@@ -13,10 +15,9 @@ def mode(x):
 
 
 def load_data(path):
-    if isinstance(path, Path):
-        suffix = path.suffix
-    elif isinstance(path, str):
-        suffix = path.split(".")[-1]
+    if not isinstance(path, Path):
+        path = Path(path)
+    suffix = path.suffix
 
     if suffix == ".csv" or suffix == ".txt" or suffix == ".tsv":
         data = pd.read_csv(path)
@@ -55,12 +56,23 @@ def load_data(path):
     return data
 
 
-def in_ipynb():
+def int_float(s):
     try:
-        cfg = get_ipython().config 
-        if cfg['IPKernelApp']['parent_appname'] == 'ipython-notebook':
-            return True
-        else:
-            return False
-    except NameError:
-        return False
+        n = int(s)
+    except ValueError:
+        n = float(s)
+    finally:
+        return n
+
+
+class TqdmStreamHandler(logging.Handler):
+    def __init__(self, level=logging.NOTSET):
+        super().__init__(level)
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            tqdm.tqdm.write(msg)
+            self.flush()
+        except Exception:
+            self.handleError(record)

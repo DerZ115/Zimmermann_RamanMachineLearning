@@ -1,20 +1,34 @@
+import sys
+sys.path.append("./lib/")
+
 import argparse
 import re
 import logging
+import os
+from datetime import datetime
 from pathlib import Path
+from natsort import natsorted, ns
 
 import numpy as np
 import pandas as pd
 
-from lib.opus_converter import convert_opus
+from raman_lib.opus_converter import convert_opus
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-handler_c = logging.StreamHandler()
-handler_f = logging.FileHandler("./log/01_create_dataset.log")
+logdir  = Path("./log/01_create_dataset/")
 
-handler_c.setLevel(logging.DEBUG)
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
+
+dt = datetime.now().strftime("%Y%m%d-%H%M%S")
+logfile = logdir / f"{dt}.log"
+
+handler_c = logging.StreamHandler()
+handler_f = logging.FileHandler(logfile)
+
+handler_c.setLevel(logging.WARN)
 handler_f.setLevel(logging.DEBUG)
 
 format_c = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
@@ -38,12 +52,12 @@ def create_dataset(dirs_in, labels):
     data = []
     wns = []
     lab = []
+    files = []
 
-    for i, dir in enumerate(dirs_in):
+    for i, dir_in in enumerate(dirs_in):
         logger.info(f"Loading files from {dir}")
-        files = sorted([x for x in dir.iterdir()])
 
-        for file in files:
+        for file in natsorted(dir_in.iterdir(), alg=ns.PATH):
             logger.debug(f"Loading file {file}")
             
             if file.suffix.lower() == ".txt" or file.suffix.lower() == ".csv":
@@ -61,6 +75,7 @@ def create_dataset(dirs_in, labels):
             lab.append(labels[i])
             wns.append(filedata[:, 0])
             data.append(filedata[:, 1])
+            files.append(file)
 
 
 
@@ -71,6 +86,7 @@ def create_dataset(dirs_in, labels):
 
     data = pd.DataFrame(data, columns=wns)
     data.insert(0, "label", lab)
+    data.insert(1, "file", files)
 
     logger.info("Finished loading data.")
     return data
@@ -86,8 +102,7 @@ if __name__ == "__main__":
                         help="Directories containing the Raman spectra as csv files. Each directory should contain one class.", required=True)
     parser.add_argument("-l", "--label", metavar="NAME", type=str, nargs="+", action="store",
                         help="Labels for the classes. Must have the same number of entries as '--dir'. If not provided, the directory names will be used.", required=False)
-    parser.add_argument("-n", "--num", metavar="INT", type=int, nargs=1, action="store", help="Number of samples/spectra to use for each class. If 0, all samples will be kept.", default=0)
-    parser.add_argument("-o", "--out", metavar="PATH", type=str, nargs=1,
+    parser.add_argument("-o", "--out", metavar="PATH", type=str,
                         action="store", help="Output path for the merged csv file", required=True)
 
     logger.info("Parsing arguments")
@@ -96,6 +111,6 @@ if __name__ == "__main__":
         logger.debug(f"Received argument {arg} with value {val}")
 
     dataset = create_dataset(args.dir, args.label)
-    logger.info(f"Saving data to file {args.out[0]}")
 
-    dataset.to_csv(args.out[0], index=False)
+    logger.info(f"Saving data to file {args.out}")
+    dataset.to_csv(args.out, index=False)

@@ -7,7 +7,7 @@ from pybaselines.whittaker import arpls, asls
 from sklearn.base import BaseEstimator, TransformerMixin
 from scipy.signal import savgol_filter, find_peaks
 
-prep_logger = logging.getLogger("__main__." + __name__)
+prep_logger = logging.getLogger(__name__)
 
 class BaselineCorrector(BaseEstimator, TransformerMixin):
     def __init__(self, method="asls"):
@@ -50,28 +50,8 @@ class BaselineCorrector(BaseEstimator, TransformerMixin):
             prep_logger.critical("Invalid baseline method")
             raise ValueError(f"Method {self.method} does not exist.")
 
-        prep_logger.info("Finished baseline correction")
+        prep_logger.info("Baseline correction complete")
         return X - bl
-
-
-class ColumnSelectorPCA(BaseEstimator, TransformerMixin):
-    """Class to select a range of components from PCA, so that components do not 
-    have to be calculated over and over."""
-
-    def __init__(self, n_components=None):
-        """Initialize range of components."""
-        if n_components == None:
-            n_components = -1
-        self.n_components = n_components
-
-    def fit(self, X, y=None):
-        """Does not do anything, included for compatibility with pipelines"""
-        return self
-
-    def transform(self, X, y=None):
-        """Return the previously selected range of components."""
-        return X[:, 0:self.n_components]
-
 
 class RangeLimiter(BaseEstimator, TransformerMixin):
     def __init__(self, lim=(None, None), reference=None):
@@ -95,8 +75,12 @@ class RangeLimiter(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X, y=None):
-        prep_logger.info(f"Reducing spectral range to {self.lim}")
-        return X[:, self.lim_[0]:self.lim_[1]]
+        prep_logger.debug(f"Reducing spectral range to {self.lim}")
+        if isinstance(X, pd.DataFrame):
+            result = X.iloc[:, self.lim_[0]:self.lim_[1]]
+        else:
+            result = X[:, self.lim_[0]:self.lim_[1]]
+        return result
 
     def _replace_nones(self, X):
         if self.lim[0] is None:
@@ -164,10 +148,13 @@ class PeakPicker(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         prep_logger.info("Finding peaks in the mean spectrum")
         X_mean = X.mean(axis=0)
-        self.peaks_ = find_peaks(X_mean, distance=self.min_dist)[0]
-        prep_logger.debug(f"Number of peaks found: {self.peaks_}")
+        self.peak_indices = find_peaks(X_mean, distance=self.min_dist)[0]
+        self.peaks_ = np.zeros((len(self.peak_indices), X.shape[1]), dtype=bool)
+        for i, j in enumerate(self.peak_indices):
+            self.peaks_[i, j] = True
+        prep_logger.debug(f"Number of peaks found: {self.peaks_.sum()}")
         return self
 
     def transform(self, X, y=None):
         prep_logger.info("Selecting previously identified peaks")
-        return X[:, self.peaks_]
+        return X[:, self.peak_indices]
