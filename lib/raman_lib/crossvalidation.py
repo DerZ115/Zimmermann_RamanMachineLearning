@@ -330,7 +330,7 @@ class CrossValidator(BaseEstimator, MetaEstimatorMixin):
         if self.coef_func:
             pd.DataFrame(self.coefs_, columns=self.feature_names).to_csv(
                 path / "coefficients.csv",
-                index=False, header=False
+                index=False
             )
 
         if self.explainer:
