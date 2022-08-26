@@ -146,7 +146,7 @@ class PeakPicker(BaseEstimator, TransformerMixin):
         self.min_dist = min_dist
 
     def fit(self, X, y=None):
-        prep_logger.info("Finding peaks in the mean spectrum")
+        prep_logger.debug("Finding peaks in the mean spectrum")
         X_mean = X.mean(axis=0)
         self.peak_indices = find_peaks(X_mean, distance=self.min_dist)[0]
         self.peaks_ = np.zeros((len(self.peak_indices), X.shape[1]), dtype=bool)
@@ -156,5 +156,5 @@ class PeakPicker(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X, y=None):
-        prep_logger.info("Selecting previously identified peaks")
+        prep_logger.debug("Selecting previously identified peaks")
         return X[:, self.peak_indices]
