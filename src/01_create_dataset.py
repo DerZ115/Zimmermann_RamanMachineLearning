@@ -55,7 +55,7 @@ def create_dataset(dirs_in, labels):
     files = []
 
     for i, dir_in in enumerate(dirs_in):
-        logger.info(f"Loading files from {dir}")
+        logger.info(f"Loading files from {dir_in}")
 
         for file in natsorted(dir_in.iterdir(), alg=ns.PATH):
             logger.debug(f"Loading file {file}")
