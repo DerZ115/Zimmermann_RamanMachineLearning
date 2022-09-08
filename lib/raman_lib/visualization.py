@@ -8,9 +8,9 @@ from scipy.signal import find_peaks
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix, roc_curve, auc
 
 
-def plot_spectra_peaks(wns, signal, peaks=None, labels=None):
+def plot_spectra_peaks(wns, signal, peaks=None, labels=None, figsize=(8,6)):
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
     plt.subplots_adjust(bottom=0.2)
 
     line, = ax.plot(wns, signal[0, :])
@@ -101,7 +101,7 @@ def split_by_sign(x, y):
     return x0, y_neg, y_zero, y_pos
 
 
-def plot_validation_curve(param, train_scores, test_scores, label, log_scale=False):
+def plot_validation_curve(param, train_scores, test_scores, x_label, y_label, log_scale=False, figsize=(8,6)):
     """Plot the validation curve of a model (train and test scores 
     depending on a parameter value.)
 
@@ -110,30 +110,50 @@ def plot_validation_curve(param, train_scores, test_scores, label, log_scale=Fal
         train_scores (np.ndarray): Training scores of the hyperparameter optimization. The last dimension of the array must have the same length as param.
         test_scores (_type_): Test scores of the hyperparameter optimization. The last dimension of the array must have the same length as param.
     """
-    train_scores_mean = train_scores.mean(axis=0)
-    train_scores_std = train_scores.std(axis=0)
+    train_scores_mean = train_scores.mean(axis=1)
+    train_scores_std = train_scores.std(axis=1)
 
-    test_scores_mean = test_scores.mean(axis=0)
-    test_scores_std = test_scores.std(axis=0)
+    test_scores_mean = test_scores.mean(axis=1)
+    test_scores_std = test_scores.std(axis=1)
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
 
     if log_scale:
         ax.set_xscale("log")
 
-    ax.plot(param, train_scores_mean, label="Training")
-    ax.plot(param, test_scores_mean, label="Validation")
+    ax.plot(param, train_scores_mean, color="k", linestyle="dashed", label="Training")
+    ax.plot(param, test_scores_mean, color="k", label="Validation")
 
     ax.fill_between(param, train_scores_mean - train_scores_std,
-                    train_scores_mean + train_scores_std, alpha=0.5)
+                    train_scores_mean + train_scores_std, color="k", alpha=0.3)
     ax.fill_between(param, test_scores_mean - test_scores_std,
-                    test_scores_mean + test_scores_std, alpha=0.5)
+                    test_scores_mean + test_scores_std, color="k", alpha=0.3)
 
-    ax.set_xlabel(label)
-    ax.set_ylabel("Score")
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label.title())
 
     ax.grid()
     ax.legend(loc="best")
+
+
+def plot_val_curves(cv_results, score="accuracy", x_labels=None, y_label="Score", log_scale=False, figsize=(8,6)):
+    if not isinstance(cv_results, pd.DataFrame):
+        raise TypeError("Pandas DataFrame required.")
+    if isinstance(x_labels, str):
+        x_labels = [x_labels]
+
+    params = cv_results.filter(regex="param_")
+    train_scores = np.asarray(cv_results.filter(regex=f"train_{score}_"))
+    test_scores = np.asarray(cv_results.filter(regex=f"test_{score}_"))
+
+    if len(params.columns) == 1:
+        
+        if x_labels is None:
+            x_labels = [params.columns[0]]
+
+        x = np.asarray(params).ravel()
+        plot_validation_curve(x, train_scores, test_scores, x_label=x_labels[0], y_label=y_label, log_scale=log_scale, figsize=figsize)
+
 
 
 def annotate_peaks(x, y, min_height=0, min_dist=None):
@@ -163,42 +183,35 @@ def annotate_peaks(x, y, min_height=0, min_dist=None):
                      va="top")
 
 
-def plot_coefs(features, coefs, method=None, q=0.0,
-               xlabel=None, ylabel="Coefficient (-)", show_range=None, annotate=False,
-               min_height=0, min_dist=None):
+def plot_coefs(coefs, features=None, xlabel=None, ylabel="Coefficient (-)", 
+               show_range=False, annotate=False,
+               min_height=0, min_dist=None, figsize=(8,6)):
 
-    if method == "mean":
-        if q == 0:
-            coefs_plot = np.mean(coefs, axis=(0, 1))
-        else:
-            coefs_low, coefs_high = np.quantile(coefs, (q, 1-q), axis=(0, 1))
-            coefs_plot = coefs.mean(axis=(0, 1),
-                                    where=(coefs >= coefs_low) &
-                                    (coefs <= coefs_high))
-    elif method == "median":
-        coefs_plot = np.median(coefs, axis=(0, 1))
+    if isinstance(coefs, pd.DataFrame):
+        features = np.asarray(coefs.columns.astype(float))
+    elif features is None:
+        features = range(len(coefs[0]))
 
-    else:
-        coefs_plot = coefs.ravel()
+    coefs = np.asarray(coefs)
 
-    if show_range == "std":
-        coefs_std = np.std(coefs, axis=(0, 1))
-        coefs_lower = coefs_plot - coefs_std
-        coefs_upper = coefs_plot + coefs_std
-    elif show_range == "iqr":
-        coefs_lower, coefs_upper = np.quantile(coefs, (0.25, 0.75))
+    
+    coefs_plot = np.mean(coefs, axis=0)
 
     features_0, coefs_neg, coefs_0, coefs_pos = split_by_sign(
         features, coefs_plot)
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
     ax.axhline(c="black", alpha=0.5, linewidth=1)
 
     ax.plot(features_0, coefs_neg, color="blue")
     ax.plot(features_0, coefs_pos, color="red")
     ax.plot(features_0, coefs_0, color="black")
 
-    if show_range is not None:
+    if show_range:
+        coefs_std = np.std(coefs, axis=0)
+        coefs_lower = coefs_plot - coefs_std
+        coefs_upper = coefs_plot + coefs_std
+
         ax.fill_between(features, coefs_lower, coefs_upper,
                         color="grey", alpha=0.7, edgecolor=None)
 
@@ -218,11 +231,11 @@ def plot_coefs(features, coefs, method=None, q=0.0,
     plt.plot()
 
 
-def plot_confidence_scores(scores, groups, order=None, scale="linear"):
+def plot_confidence_scores(scores, groups, order=None, scale="linear", figsize=(8,6)):
 
     scores_plot = scores.mean(axis=0)
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
 
     if scale == "linear":
         ax.axhline(0, color="k", linestyle="--", linewidth=1, alpha=0.7)
@@ -257,7 +270,10 @@ def plot_confidence_scores(scores, groups, order=None, scale="linear"):
     plt.plot()
 
 
-def plot_confusion_matrix(y_pred, y_true, labels, subtitle):
+def plot_confusion_matrix(y_pred, y_true, labels, title, figsize=(6,6)):
+
+    if not isinstance(y_pred, np.ndarray):
+        y_pred = np.asarray(y_pred)
 
     conf_matrices = np.asarray(
         [confusion_matrix(y_true, y_pred[i, :]) for i in range(len(y_pred))]
@@ -265,7 +281,7 @@ def plot_confusion_matrix(y_pred, y_true, labels, subtitle):
 
     conf_matrix_plot = conf_matrices.mean(axis=0)
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
 
     ConfusionMatrixDisplay(conf_matrix_plot).plot(values_format=".1f", ax=ax)
 
@@ -273,32 +289,41 @@ def plot_confusion_matrix(y_pred, y_true, labels, subtitle):
     ax.set_yticklabels(labels, rotation=90, va="center")
     ax.set_xlabel("Predicted label", fontsize=12)
     ax.set_ylabel("True label", fontsize=12)
-    ax.set_title(f"Average Confusion Matrix\n{subtitle}", fontsize=16)
+    ax.set_title(title, fontsize=16)
 
     fig.tight_layout()
 
     plt.plot()
 
 
-def plot_roc_curve(conf_scores, y, labels, name):
-    aucs = []
+def plot_roc_curve(conf_scores, y, labels, name, figsize=(8,6)):
 
-    fig, ax = plt.subplots()
+    if not isinstance(conf_scores, np.ndarray):
+        conf_scores = np.asarray(conf_scores)
+    mean_fpr = np.linspace(0, 1, 200)
+    aucs = []
+    tprs = []
+
+    fig, ax = plt.subplots(figsize=figsize)
 
     ax.plot([0, 1], [0, 1], color="k", linestyle="--")
 
     for row in conf_scores:
         fpr, tpr, _ = roc_curve(y, row)
-        ax.plot(fpr, tpr, color="C0", alpha=0.2, linewidth=1)
+        ax.plot(fpr, tpr, color="k", alpha=0.2, linewidth=1)
         aucs.append(auc(fpr, tpr))
+        tpr_interp = np.interp(mean_fpr, fpr, tpr)
+        tpr_interp[0] = 0.0
+        tprs.append(tpr_interp)
 
-    mean_fpr, mean_tpr, _ = roc_curve(y, conf_scores.mean(axis=0))
+    mean_tpr = np.mean(tprs, axis=0)
+    mean_tpr[-1] = 1
 
     aucs_mean = np.mean(aucs)
     aucs_std = np.std(aucs)
 
     ax.plot(
-        mean_fpr, mean_tpr, color="C0", linewidth=2,
+        mean_fpr, mean_tpr, color="k", linewidth=2,
         label=f"{name} (AUC = {aucs_mean:.4f} $\pm$ {aucs_std:.4f})"
     )
 
@@ -312,6 +337,9 @@ def plot_roc_curve(conf_scores, y, labels, name):
         fontsize=12
     )
 
+    ax.set_xlim([0, 1])
+    ax.set_ylim([0, 1])
+
     ax.legend(loc="lower right")
     fig.tight_layout()
 
@@ -320,13 +348,13 @@ def plot_roc_curve(conf_scores, y, labels, name):
     return np.array((mean_fpr, mean_tpr)), np.array((aucs_mean, aucs_std))
 
 
-def plot_heatmap(combinations, test_scores, x, y, grouping=None, max_cols=None):
+def plot_heatmap(combinations, test_scores, x, y, grouping=None, max_cols=None, figsize=(8,6)):
 
     scores_df = pd.DataFrame(combinations)
     scores_df["test_scores"] = test_scores.mean(axis=0)
 
     if grouping is None:
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=figsize)
 
         piv = pd.pivot(scores_df, index=y, columns=x, values="test_scores")
 
@@ -369,3 +397,98 @@ def plot_heatmap(combinations, test_scores, x, y, grouping=None, max_cols=None):
                         ax=ax,
                         cbar=False)
             ax.set_title(title)
+
+
+def plot_qc_summary(qc_results, 
+                    binrange_peaks=None, 
+                    binwidth_peaks=None, 
+                    binrange_score=None, 
+                    binwidth_score=None,
+                    ymax_peaks=None,
+                    ymax_score=None, 
+                    figsize=(8,6)):
+
+    sns.set(style="ticks")
+
+    fig, ((ax_box1, ax_box2), (ax_hist1, ax_hist2)) = plt.subplots(
+        2, 2, sharex="col", gridspec_kw={"height_ratios": (.15, .85)}, figsize=figsize)
+
+    sns.boxplot(x=qc_results.iloc[:,1], ax=ax_box1)
+    sns.boxplot(x=qc_results.iloc[:,0], ax=ax_box2)
+    sns.histplot(qc_results.iloc[:,1], ax=ax_hist1, binrange=binrange_peaks, binwidth=binwidth_peaks)
+    sns.histplot(qc_results.iloc[:,0], ax=ax_hist2, binrange=binrange_score, binwidth=binwidth_score)
+
+    ax_box1.set(yticks=[])
+    ax_box2.set(yticks=[])
+    sns.despine(ax=ax_hist1)
+    sns.despine(ax=ax_hist2)
+    sns.despine(ax=ax_box1, left=True)
+    sns.despine(ax=ax_box2, left=True)
+
+    ax_hist1.set_xlabel("Number of Peaks")
+    ax_hist2.set_xlabel(qc_results.columns[0])
+
+    ax_hist1.set_ylim([None, ymax_peaks])
+    ax_hist2.set_ylim([None, ymax_score])
+
+    ax_box1.tick_params(axis="x", labelbottom=True)
+    ax_box2.tick_params(axis="x", labelbottom=True)
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_params(params, labels=None, figsize=(8,6)):
+    if labels is not None:
+        if isinstance(labels, str):
+            labels = [labels]
+        params.columns = labels
+    
+    for param, vals in params.iteritems():
+        fig, ax = plt.subplots(figsize=figsize)
+        pd.DataFrame(vals).boxplot(ax=ax)
+
+
+def plot_roc_comparison(rocs, aucs, labels=None, figsize=(8,6)):
+    fig, ax = plt.subplots(figsize=figsize)
+
+    ax.plot([0, 1], [0, 1], color="k", linestyle="--")
+
+    for name, curve in rocs.items():
+        ax.plot(curve[0], curve[1], 
+                label=f"{name} (AUC = {aucs[name][0]:.4f} $\pm$ {aucs[name][1]:.4f})")
+    
+    ax.set_xlabel(
+        f"False Positive Rate (Positive label: {labels[1]})",
+        fontsize=12
+    )
+
+    ax.set_ylabel(
+        f"True Positive Rate (Positive label: {labels[1]})",
+        fontsize=12
+    )
+
+    ax.set_xlim([0, 1])
+    ax.set_ylim([0, 1])
+
+    ax.legend(loc="lower right")
+    fig.tight_layout()
+
+    plt.plot()
+
+
+def boxplot_comparison(data, ylabel, log_scale=False, figsize=(8,6)):
+    fig, ax = plt.subplots(figsize=figsize)
+
+    if not isinstance(data, pd.DataFrame):
+        data = pd.DataFrame(data)
+
+    sns.boxplot(data=data, 
+                ax=ax,
+                boxprops={"facecolor": "w"})
+
+    if log_scale:
+        ax.semilogy()
+
+    ax.set_ylabel(ylabel)
+    ax.grid(axis="y")

@@ -143,6 +143,7 @@ if __name__ == "__main__":
                         scoring=args.scoring,
                         refit=refit,
                         coef_func=lambda x: x[1].coef_,
+                        feature_names=wns,
                         n_folds=args.folds,
                         n_trials=args.trials,
                         n_jobs=args.jobs
@@ -180,6 +181,7 @@ if __name__ == "__main__":
                         scoring=args.scoring,
                         refit=refit,
                         coef_func=lambda x: x[1].coef_,
+                        feature_names=wns,
                         n_folds=args.folds,
                         n_trials=args.trials,
                         n_jobs=args.jobs
@@ -215,6 +217,7 @@ if __name__ == "__main__":
                         scoring=args.scoring,
                         refit=refit,
                         coef_func=lambda x: x[1].coef_,
+                        feature_names=wns,
                         n_folds=args.folds,
                         n_trials=args.trials,
                         n_jobs=args.jobs
@@ -249,6 +252,7 @@ if __name__ == "__main__":
                         scoring=args.scoring,
                         refit=refit,
                         coef_func=lambda x: x[1].coef_,
+                        feature_names=wns,
                         n_folds=args.folds,
                         n_trials=args.trials,
                         n_jobs=args.jobs

@@ -47,13 +47,12 @@ do
         conda activate $ENV_NAME
 
         DATASET_OUT="$DATASET_DIR/$BASE_FILENAME.csv"
-        QC_DIR="$RESULT_DIR/quality_control/"
-        QC_OUT="$QC_DIR/${BASE_FILENAME}_qc.csv"
-        PREP_DIR="$RESULT_DIR/preprocessing/"
-        PREP_OUT="$PREP_DIR/${BASE_FILENAME}_preprocessed.csv"
-        LDA_DIR="$RESULT_DIR/$BASE_FILENAME/lda_dim_reduction/"
-        REG_DIR="$RESULT_DIR/$BASE_FILENAME/regularized_models/"
-        TREE_DIR="$RESULT_DIR/$BASE_FILENAME/tree_based_models/"
+        RESULT_DIR="$RESULT_DIR/$BASE_FILENAME"
+        QC_OUT="$RESULT_DIR/${BASE_FILENAME}_qc.csv"
+        PREP_OUT="$RESULT_DIR/${BASE_FILENAME}_preprocessed.csv"
+        LDA_DIR="$RESULT_DIR/lda_dim_reduction/"
+        REG_DIR="$RESULT_DIR/regularized_models/"
+        TREE_DIR="$RESULT_DIR/tree_based_models/"
 
         if [ "${REPLY}" == 1 ]
         then
@@ -66,7 +65,7 @@ do
         elif [ "${REPLY}" == 2 ]
         then
             python ./src/02_quality_control.py \
-                -f $DATASET_OUT -o $QC_DIR \
+                -f $DATASET_OUT -o $RESULT_DIR \
                 -l $QC_LIM_LOW $QC_LIM_HIGH \
                 -w $QC_WINDOW -t $QC_THRESHOLD \
                 -m $QC_MIN_HEIGHT -s $QC_SCORE \
@@ -76,7 +75,7 @@ do
         then
             python ./src/03_preprocess_data.py \
                 -f $QC_OUT \
-                -o $PREP_DIR \
+                -o $RESULT_DIR \
                 -l $PREP_LIM_LOW $PREP_LIM_HIGH\
                 -w $PREP_WINDOW
 
@@ -110,7 +109,8 @@ do
                 -k $N_FOLDS -j $N_CORES \
                 --tree-depth "${DT_DEPTH[@]}" \
                 --tree-alpha "${DT_ALPHA[@]}" \
-                --rf-depth "${RF_DEPTH[@]}" \
+                --rf-bootstrapping "${RF_BOOTSTRAPPING[@]}" \
+                --rf-feature-sample "${RF_FEATURE_SAMPLE[@]}" \
                 --gbdt-learning-rate "${GBDT_LEARNING_RATE[@]}"
                 
         elif [ "${REPLY}" == "all" ]
@@ -123,7 +123,7 @@ do
 
             # Quality control
             python ./src/02_quality_control.py \
-                -f $DATASET_OUT -o $QC_DIR \
+                -f $DATASET_OUT -o $RESULT_DIR \
                 -l $QC_LIM_LOW $QC_LIM_HIGH \
                 -w $QC_WINDOW -t $QC_THRESHOLD \
                 -m $QC_MIN_HEIGHT -s $QC_SCORE \
@@ -132,7 +132,7 @@ do
             # Preprocessing
             python ./src/03_preprocess_data.py \
                 -f $QC_OUT \
-                -o $PREP_DIR \
+                -o $RESULT_DIR \
                 -l $PREP_LIM_LOW $PREP_LIM_HIGH\
                 -w $PREP_WINDOW
 
@@ -163,7 +163,8 @@ do
                 -k $N_FOLDS -j $N_CORES \
                 --tree-depth "${DT_DEPTH[@]}" \
                 --tree-alpha "${DT_ALPHA[@]}" \
-                --rf-depth "${RF_DEPTH[@]}" \
+                --rf-bootstrapping "${RF_BOOTSTRAPPING[@]}" \
+                --rf-feature-sample "${RF_FEATURE_SAMPLE[@]}" \
                 --gbdt-learning-rate "${GBDT_LEARNING_RATE[@]}"
 
         else

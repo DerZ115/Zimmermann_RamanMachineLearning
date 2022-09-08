@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import logging
 import tqdm
+from math import floor, log10
 from pathlib import Path
 
 from .opus_converter import convert_opus

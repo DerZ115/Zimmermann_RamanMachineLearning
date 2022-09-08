@@ -69,12 +69,15 @@ def parse_args():
     parser.add_argument("--tree-alpha", metavar=("min", "max", "n steps"), type=int_float, nargs=3, action="store", 
                         help="Used to set the range of alpha values for pruning of decision trees using numpy.logspace.", 
                         default=[-2, 2, 5])
-    parser.add_argument("--rf-depth", metavar=("min", "max+1", "step"), type=int, nargs=3, action="store", 
-                        help="Used to set the range of maximum depths for crossvalidation of random forests.", 
-                        default=[1, 10, 1])
+    parser.add_argument("--rf-bootstrapping", metavar=("min", "max", "step"), type=int, nargs=3, action="store", 
+                        help="Used to set the range for subsampling (bootstrapping) in random forests using numpy.linspace.", 
+                        default=[0.1, 0.9, 9])
+    parser.add_argument("--rf-feature-sample", metavar=("min", "max", "step"), type=int, nargs=3, action="store", 
+                        help="Used to set the range for subsampling of features in random forests using numpy.linspace.", 
+                        default=[0.1, 1, 10])
     parser.add_argument("--gbdt-learning-rate", metavar=("min", "max", "n steps"), type=int_float, nargs=3, action="store", 
-                        help="Used to set the range of learning rate values for gradient-boosted trees using np.logspace.", 
-                        default=[-3, 0, 10])
+                        help="Used to set the range of learning rate values for gradient-boosted trees using np.linspace.", 
+                        default=[0.05, 0.5, 10])
 
     logger.info("Parsing arguments")
     args = parser.parse_args()
@@ -135,6 +138,7 @@ if __name__ == "__main__":
                         param_grid,
                         scoring=args.scoring,
                         refit=refit,
+                        feature_names=wns,
                         n_folds=args.folds,
                         n_trials=args.trials,
                         n_jobs=args.jobs
@@ -161,16 +165,18 @@ if __name__ == "__main__":
         os.makedirs(rf_path_out)
 
     clf = LGBMClassifier(boosting_type="rf",
-                         colsample_bytree=0.2,
-                         subsample=0.8,
                          subsample_freq=1,
                          max_bin=10,
-                         random_state=5417)
+                         max_depth=8,
+                         random_state=2434)
 
     param_grid = {
-        "max_depth": range(args.rf_depth[0],
-                           args.rf_depth[1],
-                           args.rf_depth[2])
+        "colsample_bytree": np.linspace(args.rf_feature_sample[0],
+                                        args.rf_feature_sample[1],
+                                        args.rf_feature_sample[2]),
+        "subsample": np.linspace(args.rf_bootstrapping[0],
+                                 args.rf_bootstrapping[1],
+                                 args.rf_bootstrapping[2])
         }
 
     cv = CrossValidator(clf,
@@ -200,11 +206,10 @@ if __name__ == "__main__":
     clf = LGBMClassifier(colsample_bytree=0.2,
                          max_bin=10,
                          max_depth=5,
-                         n_estimators=50,
                          random_state=6233)
 
     param_grid = {
-        "learning_rate": np.logspace(args.gbdt_learning_rate[0],
+        "learning_rate": np.linspace(args.gbdt_learning_rate[0],
                                      args.gbdt_learning_rate[1],
                                      args.gbdt_learning_rate[2])
         }

@@ -311,10 +311,18 @@ class CrossValidator(BaseEstimator, MetaEstimatorMixin):
             path / "predictions.csv",
             header=False, index=False
         )
-        pd.DataFrame(self.predictions_["conf_scores"]).to_csv(
-            path / "confidence_scores.csv",
-            header=False, index=False
-        )
+
+        if "conf_scores" in self.predictions_:
+            pd.DataFrame(self.predictions_["conf_scores"]).to_csv(
+                path / "confidence_scores.csv",
+                header=False, index=False
+            )
+
+        if "probability" in self.predictions_:
+            pd.DataFrame(self.predictions_["probability"]).to_csv(
+                path / "probabilities.csv",
+                header=False, index=False
+            )
 
         if self.do_gs:
             pd.DataFrame(self.cv_results_).to_csv(

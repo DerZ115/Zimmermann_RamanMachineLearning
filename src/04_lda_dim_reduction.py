@@ -124,6 +124,7 @@ if __name__ == "__main__":
     cv = CrossValidator(clf,
                         scoring=args.scoring,
                         coef_func=lambda x: x.scalings_,
+                        feature_names=wns,
                         n_folds=args.folds,
                         n_trials=args.trials,
                         n_jobs=args.jobs
@@ -157,6 +158,7 @@ if __name__ == "__main__":
                         refit=refit,
                         coef_func=lambda x: np.matmul(x[0].components_.T,
                                                       x[1].scalings_),
+                        feature_names=wns,
                         n_folds=args.folds,
                         n_trials=args.trials,
                         n_jobs=args.jobs
@@ -189,6 +191,7 @@ if __name__ == "__main__":
                         refit=refit,
                         coef_func=lambda x: np.matmul(x[0].components_.T,
                                                     x[1].scalings_),
+                        feature_names=wns,
                         n_folds=args.folds,
                         n_trials=args.trials,
                         n_jobs=args.jobs
@@ -222,6 +225,7 @@ if __name__ == "__main__":
                         scoring=args.scoring,
                         refit=refit,
                         coef_func=lambda x: x[1].scalings_[x[0].labels_],
+                        feature_names=wns,
                         n_folds=args.folds,
                         n_trials=args.trials,
                         n_jobs=args.jobs
@@ -254,6 +258,7 @@ if __name__ == "__main__":
                         refit=refit,
                         coef_func=lambda x: np.matmul(x[0].peaks_.T,
                                                       x[1].scalings_),
+                        feature_names=wns,
                         n_folds=args.folds,
                         n_trials=args.trials,
                         n_jobs=args.jobs
