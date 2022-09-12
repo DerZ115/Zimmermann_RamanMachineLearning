@@ -69,10 +69,10 @@ def parse_args():
     parser.add_argument("--tree-alpha", metavar=("min", "max", "n steps"), type=int_float, nargs=3, action="store", 
                         help="Used to set the range of alpha values for pruning of decision trees using numpy.logspace.", 
                         default=[-2, 2, 5])
-    parser.add_argument("--rf-bootstrapping", metavar=("min", "max", "step"), type=int, nargs=3, action="store", 
+    parser.add_argument("--rf-bootstrapping", metavar=("min", "max", "step"), type=int_float, nargs=3, action="store", 
                         help="Used to set the range for subsampling (bootstrapping) in random forests using numpy.linspace.", 
                         default=[0.1, 0.9, 9])
-    parser.add_argument("--rf-feature-sample", metavar=("min", "max", "step"), type=int, nargs=3, action="store", 
+    parser.add_argument("--rf-feature-sample", metavar=("min", "max", "step"), type=int_float, nargs=3, action="store", 
                         help="Used to set the range for subsampling of features in random forests using numpy.linspace.", 
                         default=[0.1, 1, 10])
     parser.add_argument("--gbdt-learning-rate", metavar=("min", "max", "n steps"), type=int_float, nargs=3, action="store", 

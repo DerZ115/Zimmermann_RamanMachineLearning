@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import re
 from matplotlib.widgets import Button
 import numpy as np
 import pandas as pd
@@ -153,7 +154,23 @@ def plot_val_curves(cv_results, score="accuracy", x_labels=None, y_label="Score"
 
         x = np.asarray(params).ravel()
         plot_validation_curve(x, train_scores, test_scores, x_label=x_labels[0], y_label=y_label, log_scale=log_scale, figsize=figsize)
+    
+    else:
+        if x_labels is None:
+            x_labels = params.columns
+        if isinstance(log_scale, bool):
+            log_scale = np.full(len(params.columns), log_scale, dtype=bool)
 
+        max_i = np.unravel_index(np.argmax(test_scores, axis=None), test_scores.shape)[0]
+        max_params = params.iloc[max_i,:]
+
+        for i, (param, vals) in enumerate(params.iteritems()):
+            max_params_tmp = max_params.drop(param)
+            indices = np.ones(len(params), dtype=bool)
+            for p, val in max_params_tmp.iteritems():
+                indices = np.bitwise_and(indices, params[p] == val)
+            x = np.asarray(vals[indices])
+            plot_validation_curve(x, train_scores[indices], test_scores[indices], x_label=x_labels[i], y_label=y_label, log_scale=log_scale[i], figsize=figsize)
 
 
 def annotate_peaks(x, y, min_height=0, min_dist=None):
@@ -189,13 +206,19 @@ def plot_coefs(coefs, features=None, xlabel=None, ylabel="Coefficient (-)",
 
     if isinstance(coefs, pd.DataFrame):
         features = np.asarray(coefs.columns.astype(float))
+    elif isinstance(coefs, pd.Series):
+        features = np.asarray(coefs.index.astype(float))
     elif features is None:
         features = range(len(coefs[0]))
 
     coefs = np.asarray(coefs)
 
-    
-    coefs_plot = np.mean(coefs, axis=0)
+    if len(coefs.shape) == 1:
+        coefs_plot = coefs
+    elif len(coefs.shape) == 2:
+        coefs_plot = np.mean(coefs, axis=0)
+    else:
+        raise ValueError("Only 1 or 2-dimensional arrays are supported.")
 
     features_0, coefs_neg, coefs_0, coefs_pos = split_by_sign(
         features, coefs_plot)
@@ -449,13 +472,18 @@ def plot_params(params, labels=None, figsize=(8,6)):
         pd.DataFrame(vals).boxplot(ax=ax)
 
 
-def plot_roc_comparison(rocs, aucs, labels=None, figsize=(8,6)):
+def plot_roc_comparison(rocs, aucs, labels=None, regex=None, figsize=(8,6)):
     fig, ax = plt.subplots(figsize=figsize)
 
     ax.plot([0, 1], [0, 1], color="k", linestyle="--")
 
     for name, curve in rocs.items():
-        ax.plot(curve[0], curve[1], 
+        if regex:
+            if re.search(regex, name):
+                ax.plot(curve[0], curve[1], 
+                    label=f"{name} (AUC = {aucs[name][0]:.4f} $\pm$ {aucs[name][1]:.4f})")
+        else:
+            ax.plot(curve[0], curve[1], 
                 label=f"{name} (AUC = {aucs[name][0]:.4f} $\pm$ {aucs[name][1]:.4f})")
     
     ax.set_xlabel(
@@ -477,11 +505,14 @@ def plot_roc_comparison(rocs, aucs, labels=None, figsize=(8,6)):
     plt.plot()
 
 
-def boxplot_comparison(data, ylabel, log_scale=False, figsize=(8,6)):
+def boxplot_comparison(data, ylabel, log_scale=False, regex=None, figsize=(8,6)):
     fig, ax = plt.subplots(figsize=figsize)
 
     if not isinstance(data, pd.DataFrame):
         data = pd.DataFrame(data)
+
+    if regex:
+        data = data.filter(regex=regex)
 
     sns.boxplot(data=data, 
                 ax=ax,
