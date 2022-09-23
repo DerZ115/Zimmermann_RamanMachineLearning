@@ -63,15 +63,9 @@ def parse_args():
                         help="Number of folds for crossvalidation.", default=5)
     parser.add_argument("-j", "--jobs", metavar="INT", type=int, action="store",
                         help="Number of parallel jobs. Set as -1 to use all available processors", default=1)
-    parser.add_argument("--tree-depth", metavar=("min", "max+1", "step"), type=int, nargs=3, action="store", 
-                        help="Used to set the range of maximum depths for crossvalidation of decision trees.", 
-                        default=[1, 10, 1])
     parser.add_argument("--tree-alpha", metavar=("min", "max", "n steps"), type=int_float, nargs=3, action="store", 
                         help="Used to set the range of alpha values for pruning of decision trees using numpy.logspace.", 
                         default=[-2, 2, 5])
-    parser.add_argument("--rf-bootstrapping", metavar=("min", "max", "step"), type=int_float, nargs=3, action="store", 
-                        help="Used to set the range for subsampling (bootstrapping) in random forests using numpy.linspace.", 
-                        default=[0.1, 0.9, 9])
     parser.add_argument("--rf-feature-sample", metavar=("min", "max", "step"), type=int_float, nargs=3, action="store", 
                         help="Used to set the range for subsampling of features in random forests using numpy.linspace.", 
                         default=[0.1, 1, 10])
@@ -125,9 +119,6 @@ if __name__ == "__main__":
     clf = DecisionTreeClassifier(random_state=653)
 
     param_grid = {
-        "max_depth": range(args.tree_depth[0],
-                           args.tree_depth[1],
-                           args.tree_depth[2]),
         "ccp_alpha": np.logspace(args.tree_alpha[0],
                                  args.tree_alpha[1],
                                  args.tree_alpha[2])
@@ -173,10 +164,7 @@ if __name__ == "__main__":
     param_grid = {
         "colsample_bytree": np.linspace(args.rf_feature_sample[0],
                                         args.rf_feature_sample[1],
-                                        args.rf_feature_sample[2]),
-        "subsample": np.linspace(args.rf_bootstrapping[0],
-                                 args.rf_bootstrapping[1],
-                                 args.rf_bootstrapping[2])
+                                        args.rf_feature_sample[2])
         }
 
     cv = CrossValidator(clf,

@@ -139,7 +139,8 @@ if __name__ == "__main__":
     data_out.to_csv(path_out_data, index=False)
 
     logger.info(f"Saving quality scores to file {path_out_scores}")
-    pd.DataFrame({score_names[args.score]: score_dict["intensity_scores"], 
+    pd.DataFrame({"File": [Path(f).name for f in data.file],
+                  score_names[args.score]: score_dict["intensity_scores"], 
                   "N Peaks": score_dict["peak_scores"]}).to_csv(
         path_out_scores, index=False
     )
