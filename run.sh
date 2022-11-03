@@ -47,7 +47,7 @@ do
         conda activate $ENV_NAME
 
         DATASET_OUT="$DATASET_DIR/$BASE_FILENAME.csv"
-        RESULT_DIR="$RESULT_DIR/$BASE_FILENAME"
+        RESULT_DIR="$RESULTS_DIR/$BASE_FILENAME"
         QC_OUT="$RESULT_DIR/${BASE_FILENAME}_qc.csv"
         PREP_OUT="$RESULT_DIR/${BASE_FILENAME}_preprocessed.csv"
         LDA_DIR="$RESULT_DIR/lda_dim_reduction/"
@@ -107,9 +107,7 @@ do
                 -f $PREP_OUT -o $TREE_DIR \
                 -s "${SCORING[@]}" -t $N_TRIALS \
                 -k $N_FOLDS -j $N_CORES \
-                --tree-depth "${DT_DEPTH[@]}" \
                 --tree-alpha "${DT_ALPHA[@]}" \
-                --rf-bootstrapping "${RF_BOOTSTRAPPING[@]}" \
                 --rf-feature-sample "${RF_FEATURE_SAMPLE[@]}" \
                 --gbdt-learning-rate "${GBDT_LEARNING_RATE[@]}"
                 
@@ -161,9 +159,7 @@ do
                 -f $PREP_OUT -o $TREE_DIR \
                 -s "${SCORING[@]}" -t $N_TRIALS \
                 -k $N_FOLDS -j $N_CORES \
-                --tree-depth "${DT_DEPTH[@]}" \
                 --tree-alpha "${DT_ALPHA[@]}" \
-                --rf-bootstrapping "${RF_BOOTSTRAPPING[@]}" \
                 --rf-feature-sample "${RF_FEATURE_SAMPLE[@]}" \
                 --gbdt-learning-rate "${GBDT_LEARNING_RATE[@]}"
 

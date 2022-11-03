@@ -22,7 +22,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-logdir = Path("./log/05_regularized_models/")
+logdir = Path("./log/06_tree_based_models/")
 
 if not os.path.exists(logdir):
     os.makedirs(logdir)
@@ -156,6 +156,7 @@ if __name__ == "__main__":
         os.makedirs(rf_path_out)
 
     clf = LGBMClassifier(boosting_type="rf",
+			 subsample=0.8,
                          subsample_freq=1,
                          max_bin=10,
                          max_depth=8,
@@ -164,7 +165,7 @@ if __name__ == "__main__":
     param_grid = {
         "colsample_bytree": np.linspace(args.rf_feature_sample[0],
                                         args.rf_feature_sample[1],
-                                        args.rf_feature_sample[2])
+                                        args.rf_feature_sample[2]),
         }
 
     cv = CrossValidator(clf,

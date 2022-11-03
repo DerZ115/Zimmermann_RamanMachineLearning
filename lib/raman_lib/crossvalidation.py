@@ -256,7 +256,7 @@ class CrossValidator(BaseEstimator, MetaEstimatorMixin):
                     X_test = current_prep.transform(X_test)
                 explainer = shap.Explainer(current_estimator, X_train)
 
-                shap_tmp = explainer(X_test)
+                shap_tmp = explainer(X_test, check_additivity=False)
                 shap_vals[test, :] = shap_tmp.values
                 shap_base_vals[test] = shap_tmp.base_values
                 shap_data[test, :] = shap_tmp.data
@@ -274,9 +274,9 @@ class CrossValidator(BaseEstimator, MetaEstimatorMixin):
 
         if self.explainer:
             self.shap_results_[i] = shap.Explanation(shap_vals,
-                                                    base_values=shap_base_vals,
-                                                    data=shap_data,
-                                                    feature_names=self.feature_names)
+                                                     base_values=shap_base_vals,
+                                                     data=shap_data,
+                                                     feature_names=self.feature_names)
                                             
     
     def _fit_final_estimator(self, X, y):
