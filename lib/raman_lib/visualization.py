@@ -386,21 +386,7 @@ def plot_qc_summary(qc_results,
     ax_hist2.set_ylim([None, ymax_score])
 
     ax_box1.tick_params(axis="x", labelbottom=True)
-    ax_box2.tick_params(axis="x", labelbottom=True)
-
-
-def plot_params(params, ax=None):
-    if labels is not None:
-        if isinstance(labels, str):
-            labels = [labels]
-        params.columns = labels
-    
-    for param, vals in params.iteritems():
-        fig, ax = plt.subplots(figsize=figsize)
-        pd.DataFrame(vals).boxplot(ax=ax)
-        if log_scale:
-            ax.set_yscale("log")
-        
+    ax_box2.tick_params(axis="x", labelbottom=True)      
 
 
 def plot_roc_comparison(rocs, aucs, regex=None, ax=None):
@@ -417,10 +403,13 @@ def plot_roc_comparison(rocs, aucs, regex=None, ax=None):
         else:
             ax.plot(curve[0], curve[1], 
                 label=f"{name} (AUC = {aucs[name][0]:.4f} $\pm$ {aucs[name][1]:.4f})")
+    
+    ax.set_xlim((0,1))
+    ax.set_ylim((0,1))
 
 
 
-def boxplot_comparison(data, ylabel, log_scale=False, regex=None, ax=None):
+def boxplot_comparison(data, regex=None, ax=None):
     if ax is None:
         ax = plt.gca()
 
