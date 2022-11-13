@@ -195,8 +195,8 @@ def annotate_peaks(x, y, ax, min_height=0, min_dist=None, offset=6, fontsize=Non
                     va="top")
 
 
-def plot_coefs(coefs, features=None, show_range=False, annotate=False, 
-               ax=None, annot_kw=None):
+def plot_coefs(coefs, features=None, show_range=False, ax=None,
+               col=True, annotate=False, annot_kw=None):
 
     if isinstance(coefs, pd.DataFrame):
         features = np.asarray(coefs.columns.astype(float))
@@ -214,17 +214,20 @@ def plot_coefs(coefs, features=None, show_range=False, annotate=False,
     else:
         raise ValueError("Only 1 or 2-dimensional arrays are supported.")
 
-    features_0, coefs_neg, coefs_0, coefs_pos = split_by_sign(
-        features, coefs_plot)
-
     if ax is None:
         ax=plt.gca()
 
     ax.axhline(c="black", alpha=0.5, linewidth=1)
 
-    ax.plot(features_0, coefs_neg, color="C0")
-    ax.plot(features_0, coefs_pos, color="C1")
-    ax.plot(features_0, coefs_0, color="black")
+    if col:
+        features_0, coefs_neg, coefs_0, coefs_pos = split_by_sign(features, 
+                                                                  coefs_plot)
+
+        ax.plot(features_0, coefs_neg, color="C0")
+        ax.plot(features_0, coefs_pos, color="C1")
+        ax.plot(features_0, coefs_0, color="k")
+    else:
+        ax.plot(features, coefs_plot, color="k")
 
     if show_range:
         coefs_std = np.std(coefs, axis=0)

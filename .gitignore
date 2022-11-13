@@ -1,6 +1,9 @@
 data/*
 log/*
 results/*
+img/*
+
+.ipynb_checkpoints
 notebooks/.ipynb_checkpoints
 
 __pycache__/
