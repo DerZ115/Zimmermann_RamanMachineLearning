@@ -46,10 +46,10 @@ do
         # Activate conda environment
         conda activate $ENV_NAME
 
-        DATASET_OUT="$DATASET_DIR/$BASE_FILENAME.csv"
-        RESULT_DIR="$RESULTS_DIR/$BASE_FILENAME"
-        QC_OUT="$RESULT_DIR/${BASE_FILENAME}_qc.csv"
-        PREP_OUT="$RESULT_DIR/${BASE_FILENAME}_preprocessed.csv"
+        DATASET_OUT="./data/$FILE_PREFIX.csv"
+        RESULT_DIR="./results/$FILE_PREFIX"
+        QC_OUT="$RESULT_DIR/${FILE_PREFIX}_qc.csv"
+        PREP_OUT="$RESULT_DIR/${FILE_PREFIX}_preprocessed.csv"
         LDA_DIR="$RESULT_DIR/lda_dim_reduction/"
         REG_DIR="$RESULT_DIR/regularized_models/"
         TREE_DIR="$RESULT_DIR/tree_based_models/"
@@ -60,12 +60,12 @@ do
             python ./src/01_create_dataset.py \
             -d $DIR1 $DIR2 \
             -l $LAB1 $LAB2 \
-            -o $DATASET_OUT
+            -o "$DATASET_OUT"
 
         elif [ "${REPLY}" == 2 ]
         then
             python ./src/02_quality_control.py \
-                -f $DATASET_OUT -o $RESULT_DIR \
+                -f "$DATASET_OUT" -o "$RESULT_DIR" \
                 -l $QC_LIM_LOW $QC_LIM_HIGH \
                 -w $QC_WINDOW -t $QC_THRESHOLD \
                 -m $QC_MIN_HEIGHT -s $QC_SCORE \
@@ -74,15 +74,15 @@ do
         elif [ "${REPLY}" == 3 ]
         then
             python ./src/03_preprocess_data.py \
-                -f $QC_OUT \
-                -o $RESULT_DIR \
+                -f "$QC_OUT" \
+                -o "$RESULT_DIR" \
                 -l $PREP_LIM_LOW $PREP_LIM_HIGH\
                 -w $PREP_WINDOW
 
         elif [ "${REPLY}" == 4 ]
         then
             python ./src/04_lda_dim_reduction.py \
-                -f $PREP_OUT -o $LDA_DIR \
+                -f "$PREP_OUT" -o "$LDA_DIR" \
                 -s "${SCORING[@]}" -t $N_TRIALS \
                 -k $N_FOLDS -j $N_CORES \
                 -p "${PCA_COMP[@]}" \
@@ -93,7 +93,7 @@ do
         elif [ "${REPLY}" == 5 ]
         then
             python ./src/05_regularized_models.py \
-                -f $PREP_OUT -o $REG_DIR \
+                -f "$PREP_OUT" -o "$REG_DIR" \
                 -s "${SCORING[@]}" -t $N_TRIALS \
                 -k $N_FOLDS -j $N_CORES \
                 --logreg-l1-c "${LR1_C[@]}" \
@@ -104,7 +104,7 @@ do
         elif [ "${REPLY}" == 6 ]
         then
             python ./src/06_tree_based_models.py \
-                -f $PREP_OUT -o $TREE_DIR \
+                -f "$PREP_OUT" -o "$TREE_DIR" \
                 -s "${SCORING[@]}" -t $N_TRIALS \
                 -k $N_FOLDS -j $N_CORES \
                 --tree-alpha "${DT_ALPHA[@]}" \
@@ -117,11 +117,11 @@ do
             python ./src/01_create_dataset.py \
             -d $DIR1 $DIR2 \
             -l $LAB1 $LAB2 \
-            -o $DATASET_OUT
+            -o "$DATASET_OUT"
 
             # Quality control
             python ./src/02_quality_control.py \
-                -f $DATASET_OUT -o $RESULT_DIR \
+                -f "$DATASET_OUT" -o "$RESULT_DIR" \
                 -l $QC_LIM_LOW $QC_LIM_HIGH \
                 -w $QC_WINDOW -t $QC_THRESHOLD \
                 -m $QC_MIN_HEIGHT -s $QC_SCORE \
@@ -129,14 +129,14 @@ do
 
             # Preprocessing
             python ./src/03_preprocess_data.py \
-                -f $QC_OUT \
-                -o $RESULT_DIR \
+                -f "$QC_OUT" \
+                -o "$RESULT_DIR" \
                 -l $PREP_LIM_LOW $PREP_LIM_HIGH\
                 -w $PREP_WINDOW
 
             # LDA with dim reduction
             python ./src/04_lda_dim_reduction.py \
-                -f $PREP_OUT -o $LDA_DIR \
+                -f "$PREP_OUT" -o "$LDA_DIR" \
                 -s "${SCORING[@]}" -t $N_TRIALS \
                 -k $N_FOLDS -j $N_CORES \
                 -p "${PCA_COMP[@]}" \
@@ -146,7 +146,7 @@ do
 
             # Regularized models
             python ./src/05_regularized_models.py \
-                -f $PREP_OUT -o $REG_DIR \
+                -f "$PREP_OUT" -o "$REG_DIR" \
                 -s "${SCORING[@]}" -t $N_TRIALS \
                 -k $N_FOLDS -j $N_CORES \
                 --logreg-l1-c "${LR1_C[@]}" \
@@ -156,7 +156,7 @@ do
 
             # Tree-based models
             python ./src/06_tree_based_models.py \
-                -f $PREP_OUT -o $TREE_DIR \
+                -f "$PREP_OUT" -o "$TREE_DIR" \
                 -s "${SCORING[@]}" -t $N_TRIALS \
                 -k $N_FOLDS -j $N_CORES \
                 --tree-alpha "${DT_ALPHA[@]}" \

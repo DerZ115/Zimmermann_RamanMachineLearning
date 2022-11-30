@@ -402,10 +402,10 @@ def plot_roc_comparison(rocs, aucs, regex=None, ax=None):
         if regex:
             if re.search(regex, name):
                 ax.plot(curve[0], curve[1], 
-                    label=f"{name} (AUC = {aucs[name][0]:.4f} $\pm$ {aucs[name][1]:.4f})")
+                    label=f"{name} (AUC = {aucs[name][0]:.4f})")
         else:
             ax.plot(curve[0], curve[1], 
-                label=f"{name} (AUC = {aucs[name][0]:.4f} $\pm$ {aucs[name][1]:.4f})")
+                label=f"{name} (AUC = {aucs[name][0]:.4f})")
     
     ax.set_xlim((0,1))
     ax.set_ylim((0,1))
