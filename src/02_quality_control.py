@@ -106,7 +106,7 @@ if __name__ == "__main__":
     logger.info("Data loaded sucessfully")
 
     logger.info("Running quality control")
-    data_out, score_dict = score_sort_spectra(data,
+    data_out, _, score_dict = score_sort_spectra(data,
                                               n=args.numspectra,
                                               limits=args.limits,
                                               bl_method=args.baseline,

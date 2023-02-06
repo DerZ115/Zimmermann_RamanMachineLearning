@@ -10,3 +10,9 @@ __pycache__/
 *.pyc
 
 .vscode
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/vcs.xml
+/.idea/modules.xml
+/.idea/.gitignore
+/.idea/RamanMachineLearning.iml

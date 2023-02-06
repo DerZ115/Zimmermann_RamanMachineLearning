@@ -3,7 +3,7 @@ import time
 import pandas as pd
 import logging
 from scipy.integrate import simpson
-from scipy.signal import argrelmax, savgol_filter
+from scipy.signal import argrelmax, argrelmin, savgol_filter
 from sklearn.preprocessing import normalize
 
 from .preprocessing import BaselineCorrector, RangeLimiter
@@ -43,7 +43,7 @@ def limit_range(data, limits):
     return rl.transform(data)
 
 
-def baseline_correction(data, method="asls"):
+def baseline_correction(data, method="asls", wns=None):
     """Estimate and subtract the baseline from a set of spectra.
 
     Args:    
@@ -54,8 +54,6 @@ def baseline_correction(data, method="asls"):
     Returns:
         pandas.DataFrame: Baseline-corrected spectra.
     """
-    wns = data.columns
-
     scoring_logger.debug(f"Estimating baseline using method {method}")
     bl = BaselineCorrector(method=method)
     data = bl.fit_transform(data)
@@ -76,12 +74,10 @@ def peakRecognition(data, data_bl, sg_window, bl_method="asls", threshold=0, min
     scoring_logger.debug("Starting peak detection")
     wns = data.columns.astype("float64")
 
-    data_sg = pd.DataFrame(normalize(data, norm="max"), columns=data.columns)
-    data_sg = baseline_correction(data_sg, method=bl_method)
+    data_sg = baseline_correction(normalize(data, norm="max"), bl_method, wns)
 
-    scoring_logger.debug("Calculating derivative")
     data_sg = pd.DataFrame(
-        savgol_filter(data, window_length=sg_window, polyorder=2, deriv=1), columns=wns)
+        savgol_filter(data_sg, window_length=sg_window, polyorder=2, deriv=1), columns=wns)
 
     peaks = []
 
@@ -89,18 +85,24 @@ def peakRecognition(data, data_bl, sg_window, bl_method="asls", threshold=0, min
     for i, row in data_sg.iterrows():
         row_peaks = np.where(np.diff(np.sign(row)))[0]
         row_max = argrelmax(row.values)[0]
+        row_min = argrelmin(row.values)[0]
         # Remove peaks below threshold
         row_max = [j for j in row_max if row.iloc[j]
                    > threshold and j < row_peaks[-1]]
-        row_max = [j for j in row_max if data_bl.iloc[i, j] >= min_height]
-
-        peaks_tmp = np.searchsorted(row_peaks, row_max)
-        peaks_tmp = np.unique(peaks_tmp)
+        row_min = [j for j in row_min if row.iloc[j]
+                   < -threshold and j > row_peaks[0]]
+        
+        peaks_max = np.searchsorted(row_peaks, row_max)
+        peaks_min = np.searchsorted(row_peaks, row_min) - 1
+        peaks_tmp = np.unique(np.concatenate((peaks_max, peaks_min)))
         row_peaks = row_peaks[peaks_tmp]
+        
+        # Remove peaks that are too small
+        row_peaks = [j for j in row_peaks if data_bl.iloc[i, j:j+1].mean() >= min_height]
         peaks.append(row_peaks)
 
     scoring_logger.debug("Peak detection complete")
-    return peaks
+    return peaks, data_sg
 
 
 def calc_scores(data, peaks, score_measure, n_peaks_influence):
@@ -257,7 +259,7 @@ def score_sort_spectra(data,
 
     data_bl = baseline_correction(data, method=bl_method)
 
-    peaks = peakRecognition(data, data_bl, sg_window, bl_method, threshold, min_height)
+    peaks, deriv = peakRecognition(data, data_bl, sg_window, bl_method, threshold, min_height)
 
     scores, intensity_scores, n_peaks = calc_scores(
         data_bl, peaks, score_measure, n_peaks_influence)
@@ -282,9 +284,9 @@ def score_sort_spectra(data,
     scoring_logger.info(f"Max Score: {int(np.max(scores))}")
 
     if detailed:
-        return data_out, {"intensity_scores": intensity_scores,
-                          "peak_scores": n_peaks,
-                          "total_scores": scores,
-                          "peak_pos": peaks}
+        return data_out, deriv, {"intensity_scores": intensity_scores,
+                                 "peak_scores": n_peaks,
+                                 "total_scores": scores,
+                                 "peak_pos": peaks}
     else:
         return data_out
